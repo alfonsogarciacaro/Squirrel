@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Squirrel;
 using System.Data;
 using System.Data.OleDb;
 using NUnit.Framework;
+using Squirrel;
+using Squirrel.Cleansing;
 
 namespace SquirrelUnitTest
 {
@@ -14,9 +15,9 @@ namespace SquirrelUnitTest
     public class TableAPITests
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        [Test]        
+        [Test]
         public void Test_RemoveIfBetween()
         {
             Table test = new Table();
@@ -24,7 +25,7 @@ namespace SquirrelUnitTest
             row1.Add("Name", "Sam");
             row1.Add("Experience", "10");
 
-            
+
 
             Dictionary<string, string> row2 = new Dictionary<string, string>();
             row2.Add("Name", "Jen");
@@ -101,10 +102,10 @@ namespace SquirrelUnitTest
             row1.Add("Age", "34");
             test.AddRow(row1);
             Assert.AreEqual(3, test.ColumnHeaders.Count);
-            Assert.AreEqual(2, test.MergeColumns("Name", ' ', "FirstName", "LastName").ColumnHeaders.Count);
+            Assert.AreEqual(2, test.MergeColumns("Name", ' ',true, "FirstName", "LastName").ColumnHeaders.Count);
             Assert.AreEqual("Sam Frank", test["Name"][0]);
-
         }
+
         [Test]
         public void Test_ExtractOutliers()
         {
@@ -146,7 +147,7 @@ namespace SquirrelUnitTest
             var outliers = messageSent.ExtractOutliers("Sent",OutlierDetectionAlgorithm.IQR_Interval);
             Assert.AreEqual(1, outliers.RowCount);
             Assert.AreEqual("100", outliers[0]["Sent"]);
-            
+
         }
         [Test]
         public void Test_RemoveOutliers()
@@ -210,7 +211,7 @@ namespace SquirrelUnitTest
             Assert.AreEqual(1, test.RemoveIfNotBetween("Age", 0, 100).RowCount);
 
         }
-       
+
         [Test]
         public void Test_SplitOn()
         {
@@ -244,7 +245,7 @@ namespace SquirrelUnitTest
             var splits = t1.SplitOn("Month");
             Assert.AreEqual(3, splits["Jan"].RowCount);
             Assert.AreEqual(1, splits["Feb"].RowCount);
-            
+
         }
         [Test]
         public void Test_Common()
@@ -253,7 +254,7 @@ namespace SquirrelUnitTest
             Dictionary<string, string> row1 = new Dictionary<string, string>();
             row1.Add("A", "1");
             row1.Add("B", "3");
-           
+
             t1.AddRow(row1);
 
             Dictionary<string, string> row2 = new Dictionary<string, string>();
@@ -314,7 +315,7 @@ namespace SquirrelUnitTest
             //There are three distinct rows in the merged table
             Assert.AreEqual(4, t1.Merge(t2).RowCount);
             Assert.AreEqual(3, t1.Merge(t2,removeDups:true).RowCount);
-            
+
 
         }
         [Test]
@@ -334,7 +335,7 @@ namespace SquirrelUnitTest
 
             t1.AddRow(row2);
 
-            Table t2 = new Table();            
+            Table t2 = new Table();
 
             Dictionary<string, string> row3 = new Dictionary<string, string>();
             row3.Add("Hour", "1");
@@ -369,7 +370,7 @@ namespace SquirrelUnitTest
             r3.Add("Course", "D");
             r3.Add("Duration", "5");
             t.AddRow(r3);
-           
+
 
             Table picked = t.Pick("Course","Duration");
             Assert.AreEqual(2, picked.ColumnHeaders.Count);
@@ -401,7 +402,7 @@ namespace SquirrelUnitTest
             temps.AddRow(row);
 
             temps.AddColumn(columnName: "Farenheit", formula: "9*[Celcius]/5 + 32", decimalDigits: 3);
-            
+
             Assert.AreEqual("-40", temps[0]["Farenheit"]);
         }
         [Test]
@@ -426,7 +427,7 @@ namespace SquirrelUnitTest
             tempTable.AddRow(row3);
             //Add a column called "Difference" that will have the differences of temperatures in Austin and Tampa
             tempTable.AddColumn(columnName: "Difference", formula: "[Austin] - [Tampa]", decimalDigits: 3);
-            
+
 
             //After the column gets added, the name of the column should be available in the column header collection.
             Assert.IsTrue(tempTable.ColumnHeaders.Contains("Difference"));
@@ -547,7 +548,7 @@ namespace SquirrelUnitTest
             r3.Add("Course", "F#");
             r3.Add("Duration", "03");
             t.AddRow(r3);
-            
+
             Dictionary<string,int> hist = t.Histogram("Course");
             Assert.AreEqual(2, hist.Count);
             Assert.AreEqual(2, hist["F#"]);
@@ -596,7 +597,7 @@ namespace SquirrelUnitTest
             Dictionary<string, string> r = new Dictionary<string, string>();
             r.Add("Name", "Sam");
             r.Add("Course", "C#");
-            r.Add("Duration", "4.0");           
+            r.Add("Duration", "4.0");
             r.Add("Date", "1/2/2013");
             t.AddRow(r);
             Dictionary<string, string> r2 = new Dictionary<string, string>();
@@ -614,11 +615,11 @@ namespace SquirrelUnitTest
             t.AddRow(r3);
 
            // Assert.AreEqual("Erik", t.SortBy("Duration",SortDirection.Ascending)[0]["Name"]);
-            Assert.AreEqual("Sam", t.SortBy("Name",SortDirection.Ascending)[2]["Name"]);
+            Assert.AreEqual("Sam", t.SortBy("Name",false,string.Empty,SortDirection.Ascending)[2]["Name"]);
           //  Assert.AreEqual("Jen", t.SortBy("Duration", SortDirection.Ascending)[2]["Name"]);
-            Assert.AreEqual("Erik", t.SortBy("Name", SortDirection.Descending)[2]["Name"]);
+            Assert.AreEqual("Erik", t.SortBy("Name",false, string.Empty,SortDirection.Descending)[2]["Name"]);
            // Assert.AreEqual("Erik", t.SortBy("Date", SortDirection.Descending)[0]["Name"]);
-            
+
         }
         [Test]
         public void Test_SortInThisOrder()
@@ -666,9 +667,10 @@ namespace SquirrelUnitTest
             Assert.AreEqual(2, t.Top(8).RowCount);
             Assert.AreEqual(2, t.Bottom(3).RowCount);
         }
-        
+
 
         [Test]
+        [NUnit.Framework.Ignore("TODO")]
         public void Test_RunSQLQuery()
         {
             Table t = new Table();
@@ -695,14 +697,14 @@ namespace SquirrelUnitTest
         [Test]
         public void Test_LoadARFF()
         {
-            Table play = DataAcquisition.LoadARFF(@"..\..\Data\weather.nominal.arff");
+            Table play = DataAcquisition.LoadArff(@"../../../Data/weather.nominal.arff");
             Assert.AreEqual(14, play.RowCount);
             Assert.IsTrue((new string[] { "outlook", "temperature", "humidity", "windy", "play" }).All(t => play.ColumnHeaders.Contains(t)));
             Assert.IsTrue(play.ValuesOf("outlook").Distinct().All(m => m== "sunny" || m== "overcast" || m == "rainy" ));
 
         }
         [Test]
-        [NUnit.Framework.Ignore]
+        [NUnit.Framework.Ignore("TODO")]
         public void Test_GetAs()
         {
             Table t = new Table();
@@ -722,21 +724,21 @@ namespace SquirrelUnitTest
             r3.Add("Course", "F#");
             r3.Add("Duration", "03");
             t.AddRow(r3);
-            
-            
+
+
         }
         [Test]
         public void Test_MergeByColumns()
         {
             //To Do
             //Table 1 Columns
-            //Name  | Age | Gender 
+            //Name  | Age | Gender
             //Sam   | 23  | M
             //Jane  | 19  | F
             //Raskin| 14  | M
 
             //Table 2 Columns
-            //Name | Course 
+            //Name | Course
             //Jane | C#
             //Sam  | F#
             //Raskin| Python
@@ -771,7 +773,7 @@ namespace SquirrelUnitTest
 
 
             //Table 2 Columns
-            //Name | Course 
+            //Name | Course
             //Jane | C#
             //Sam  | F#
             //Raskin| Python
@@ -804,18 +806,18 @@ namespace SquirrelUnitTest
 
              //     .ColumnHeaders
                //  .Count
-                 
+
         }
         [Test]
         public void Test_LoadHTML()
         {
-            Table accidents = DataAcquisition.LoadHTMLTable(@"..\..\Data\roadaccidents.html");
-            
+            Table accidents = DataAcquisition.LoadHtmlTable(@"../../../Data/roadaccidents.html");
+
         }
         [Test]
         public void Test_LoadTSV()
         {
-            Table data = DataAcquisition.LoadTSV(@"..\..\Data\data.tsv");
+            Table data = DataAcquisition.LoadTsv(@"../../../Data/data.tsv",true);
             Assert.AreEqual(3, data.RowCount);
             Assert.AreEqual("Jane", data["Name"][0]);
 
@@ -824,14 +826,14 @@ namespace SquirrelUnitTest
         [Test]
         public void Test_LoadCSV()
         {
-            Table births = DataAcquisition.LoadCSV(@"..\..\Data\births.csv");
+            Table births = DataAcquisition.LoadCsv(@"../../../Data/births.csv");
             Assert.AreEqual(4, births.ColumnHeaders.Count);
             Assert.AreEqual("year", births.ColumnHeaders.ElementAt(0));
             Assert.AreEqual("state", births.ColumnHeaders.ElementAt(1));
             Assert.AreEqual("sex", births.ColumnHeaders.ElementAt(2));
             Assert.AreEqual("births", births.ColumnHeaders.ElementAt(3));
             Assert.AreEqual(2654, births.RowCount);
-            Assert.IsTrue(births["sex"].Distinct().SequenceEqual(new string[] { "boy", "girl" }));            
+            Assert.IsTrue(births["sex"].Distinct().SequenceEqual(new string[] { "boy", "girl" }));
             Assert.IsTrue(births["births"][0] == births[0]["births"]);
             Assert.AreEqual("4721", births["births"][0]);
         }
@@ -877,8 +879,8 @@ namespace SquirrelUnitTest
             population.AddRow(secondYearRecord);
 
 
-            Assert.IsTrue(population.CumulativeSum("Year")[1]["Population"] == "65000");
-         
+            Assert.IsTrue(population.CumulativeFold("Year")[1]["Population"] == "65000");
+
         }
         [Test]
         public void Test_Transform()
@@ -902,7 +904,7 @@ namespace SquirrelUnitTest
 
             Assert.AreEqual("41", transformed["Quantity"][0]);
             Assert.AreEqual("11", transformed["Quantity"][1]);
-            
+
         }
         [Test]
         public void Test_Aggregate()
@@ -919,7 +921,7 @@ namespace SquirrelUnitTest
             row2.Add("Item", "Keyboard");
             row2.Add("Quantity", "11");
             row2.Add("Month", "January");
-            
+
             sales.AddRow(row2);
 
             Dictionary<string, string> row3 = new Dictionary<string, string>();

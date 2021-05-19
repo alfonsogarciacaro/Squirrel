@@ -13,8 +13,8 @@ namespace Squirrel
     /// The class that holds the data I/O methods for several file formats.
     /// </summary>
     public static class DataAcquisition
-    {         
-     
+    {
+
         /// <summary>
         /// Deletes the tags from a HTML line
         /// </summary>
@@ -46,11 +46,11 @@ namespace Squirrel
             //the html
             return html;
         }
-        
+
         /// <summary>
-        /// Creates a table out of a list of anonynous type objects. 
-        /// This is useful when you are creating a bunch of objects 
-        /// of anonymous type and want to 
+        /// Creates a table out of a list of anonynous type objects.
+        /// This is useful when you are creating a bunch of objects
+        /// of anonymous type and want to
         /// </summary>
         /// <typeparam name="T">Type of the anonynous type</typeparam>
         /// <param name="list">list of anonynous objects</param>
@@ -58,7 +58,7 @@ namespace Squirrel
         public static Table ToTableFromAnonList<T>(this IEnumerable<T> list) where T : class
         {
             Table result = new Table();
-            
+
             List<string> props = list.ElementAt(0).GetType().GetProperties().Select(l => l.Name).ToList();
             Type anon = list.ElementAt(0).GetType();
             foreach (var l in list)
@@ -139,7 +139,7 @@ namespace Squirrel
             return thisTable;
         }
         /// <summary>
-        /// Loads data from file with fixed column length. 
+        /// Loads data from file with fixed column length.
         /// </summary>
         /// <param name="fileName">The name of the file</param>
         /// <param name="headersWithLength">Headers with column widths in brackets as shown "name(20),age(2),course(5)"</param>
@@ -195,7 +195,7 @@ namespace Squirrel
 
             return result;
         }
-        
+
         private static List<string> getColumnsFromHtmlTable(string tableCode)
         {
            return Regex.Matches(tableCode, "<th>.*</th>").Cast<Match>().ElementAt(0).Value.Split(new string[] { "<th>", "</th>" }, StringSplitOptions.RemoveEmptyEntries)
@@ -213,7 +213,7 @@ namespace Squirrel
                 .Select(t => t.Trim())
                 .ToList();
 
-           
+
             var lines = Enumerable.Range(0, rows.Count / columns.Count)
                              .Select(t => rows.Skip(t*columns.Count).Take(columns.Count))
 
@@ -232,7 +232,7 @@ namespace Squirrel
 
                 AllTheRows.Add(current);
             }
-            
+
             return AllTheRows;
         }
         /// <summary>
@@ -254,21 +254,21 @@ namespace Squirrel
             var cols = getColumnsFromHtmlTable(totalTable);
             foreach (var row in getRowsFromHtmlTable(cols, totalTable))
                 loaded.AddRow(row);
-   
+
             return loaded;
-        }        
+        }
         /// <summary>
         /// Returns a list of values from each CSV row
         /// </summary>
         /// <param name="line">The string representation of a CSV row</param>
         /// <returns>Values of the line</returns>
-        private static List<string> GetValues(string line)
+        private static List<string> GetValues(string line, char[] delimiters)
         {
             string magic = Guid.NewGuid().ToString();
             //if wrapped with quotes from both sides, ignore and trim
             //else
             if (!line.Contains("\""))
-                return line.Split(',').ToList();
+                return line.Split(delimiters).ToList();
             string[] toks = line.Split(new char[]{','},StringSplitOptions.None);
 
             List<int> startingWithQuote = new List<int>();
@@ -285,7 +285,7 @@ namespace Squirrel
                     if (toks[i].EndsWith("\""))
                         endingWithQuote.Add(i);
 
-                   
+
                 }
             }
             List<string> values = new List<string>();
@@ -328,7 +328,7 @@ namespace Squirrel
             }
             return values.ToList();
         }
-        
+
         /// <summary>
         /// Loads a CSV file to a respective Table data structure.
         /// </summary>
@@ -339,8 +339,8 @@ namespace Squirrel
         {
 
 
-            return LoadFlatFile(csvFileName, hasHeader, new string[] { "," });
-            
+            return LoadFlatFile(csvFileName, hasHeader, new [] { ',' });
+
         }
 
         /// <summary>
@@ -370,16 +370,16 @@ namespace Squirrel
         /// <returns>A table loaded with these values</returns>
         public static Table LoadTsv(string tsvFileName, bool hasHeader)
         {
-            return LoadFlatFile(tsvFileName, hasHeader,  new string[] { "\t" });
+            return LoadFlatFile(tsvFileName, hasHeader,  new [] { '\t' });
         }
-       
+
         /// <summary>
         /// Loads data from any flat file
         /// </summary>
         /// <param name="fileName">The name of the file</param>
         /// <param name="delimeters">Delimeters</param>
         /// <returns>A table loaded with all the values in the file.</returns>
-        public static Table LoadFlatFile(string fileName, bool hasHeader, string[] delimeters)
+        public static Table LoadFlatFile(string fileName, bool hasHeader, char[] delimiters)
         {
 
             Table loadedCsv = new Table();
@@ -389,14 +389,14 @@ namespace Squirrel
             HashSet<string> columns = new HashSet<string>();
             while ((line = csvReader.ReadLine()) != null)
             {
-                
+
                 if (hasHeader && lineNumber == 0)//reading the column headers
                 {
                     if (line.Contains("\""))
                         line = "\"" + line + "\"";
                     //Because sometimes the column header can have a comma in them
                     //and that can spoil the order
-                    GetValues(line).ForEach(col => columns.Add(col));
+                    GetValues(line, delimiters).ForEach(col => columns.Add(col));
                   //  line.Split(delimeters, StringSplitOptions.None)
                     //    .ToList()
                       //  .ForEach(col => columns.Add(col.Trim(new char[] { '"', ' ' })));
@@ -407,11 +407,7 @@ namespace Squirrel
                     string[] values = null;
                     if (line.Trim().Length > 0)
                     {
-                        if (delimeters.Length == 1 && delimeters[0] == ",")
-                            values = GetValues(line).ToArray();
-                        else
-
-                            values = line.Split(delimeters, StringSplitOptions.None);
+                        values = GetValues(line, delimiters).ToArray();
 
                         if (values.Length == columns.Count)
                         {
@@ -453,7 +449,7 @@ namespace Squirrel
         /// <param name="align">The alignment. Possible values are left or right</param>
         /// <example>tab.PrettyDump();//The default dump </example>
         /// <example>tab.PrettyDump(header:"Sales Report");//dumping the table with a header</example>
-        /// <example>tab.PrettyDump(header:"Sales Report", align:Alignment.Left);//Right alignment is default</example>        
+        /// <example>tab.PrettyDump(header:"Sales Report", align:Alignment.Left);//Right alignment is default</example>
         public static void PrettyDump(this Table tab, ConsoleColor headerColor = ConsoleColor.Green, ConsoleColor rowColor = ConsoleColor.White,
                                                       string header = "None", Alignment align = Alignment.Right)
         {
@@ -469,7 +465,7 @@ namespace Squirrel
             Console.ForegroundColor = headerColor;
             foreach (string col in tab.ColumnHeaders)
             {
-                if (align == Alignment.Right)                   
+                if (align == Alignment.Right)
                     Console.Write(" " + col.PadLeft(longestLengths[col]) + new string(' ', 4));
                 if (align == Alignment.Left)
                     Console.Write(" " + col.PadRight(longestLengths[col]) + new string(' ', 4));
@@ -492,7 +488,7 @@ namespace Squirrel
             }
         }
       /// <summary>
-      /// Returns the tabular representation of a gist 
+      /// Returns the tabular representation of a gist
       /// </summary>
       /// <param name="gist">The pre-calculated gist</param>
       /// <returns>A table representing the gist</returns>
@@ -518,7 +514,7 @@ namespace Squirrel
 
 
         }
-     
+
         /// <summary>
         /// Returns the html table representation of the table.
         /// </summary>
@@ -562,9 +558,9 @@ namespace Squirrel
         {
             Func<string, string> quote = x => "\"" + x + "\"";
             StringBuilder csvOrtsvBuilder = new StringBuilder();
-            //Append column headers 
+            //Append column headers
             csvOrtsvBuilder.Append(tab.ColumnHeaders.Aggregate((a, b) => quote(a) + delim.ToString() + quote(b)));
-            //Append rows 
+            //Append rows
             for (int i = 0; i < tab.RowCount - 1; i++)
             {
                 foreach (string header in tab.ColumnHeaders)
@@ -577,7 +573,7 @@ namespace Squirrel
             return csvOrtsvBuilder.ToString();
         }
         /// <summary>
-        /// Generates a DataTable out of the current Table 
+        /// Generates a DataTable out of the current Table
         /// </summary>
         /// <returns></returns>
         public static DataTable ToDataTable(this Table tab)
@@ -592,11 +588,11 @@ namespace Squirrel
                     dr[column] = row[column];
                 thisTable.Rows.Add(dr);
             }
-            
+
             return thisTable;
         }
         /// <summary>
-        /// Returns the string representations of the table as a ARFF file. 
+        /// Returns the string representations of the table as a ARFF file.
         /// </summary>
         /// <returns></returns>
         public static string ToArff(this Table tab)
@@ -619,6 +615,6 @@ namespace Squirrel
             }
             return arffBuilder.ToString();
         }
-        
+
     }
 }
